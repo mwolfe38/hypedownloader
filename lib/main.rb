@@ -15,19 +15,14 @@ def clean_filename(filename)
   end
 end
 def prompt_int(prompt, default)
-  if (default != nil)
-    prompt = prompt + " [#{default}]"    
-  end
-  prompt = prompt + ": "
+  prompt = prompt + " [#{default}]" if (default != nil)  
+  prompt += ": "
   while true
     print prompt
     val = gets.strip
-    if (val == "" && default != nil)
-      return default
-    end
+    return default if (val == "" && default != nil)
     begin
-      int = Integer(val)
-      return int
+      return Integer(val)
     rescue ArgumentError
       puts "Invalid integer, try again"
     end
@@ -35,31 +30,21 @@ def prompt_int(prompt, default)
 end
 
 def prompt_string(prompt, default) 
-  if (default != nil)
-    prompt = prompt + " [#{default}]"    
-  end
+  prompt = prompt + " [#{default}]" if default != nil  
   prompt = prompt + ": "
   while true
     print prompt
     val = gets.strip
-    if (val == "" && default != nil)
-      return default
-    end
-    if (val != "")
-      return val
-    end
+    return default if (val == "" && default != nil)
+    return val if val != ""    
     puts "Invalid value, try again"
-  end
-  
+  end  
 end
 
 start_page = prompt_int("Start with page", 1)
 total_pages = prompt_int("Total pages to download", 1)
-
 username = prompt_string("Username", username)
-
 puts "We will download from page #{start_page} with total pages #{total_pages} with username #{username}"
-
 
 FileUtils.mkdir_p(save_to)
 log_file = "log.txt"
@@ -77,38 +62,29 @@ total_pages.times do |page_index|
   current_page = start_page + page_index
   url = "http://hypem.com/#{username}/#{current_page}"
   page = agent.get(url)
-  page.search("#content-left .section-track script").each do |script|  
-   script_s = script.to_s 
+  page.search("#content-left .section-track script").each do |script|
    song = {}
-   id = nil
-   script_s.each_line() do |line|
+   script.to_s.each_line() do |line|
      match  =  line.match(/\s+(artist|postid|id|key|song):\s*'(.*)'/)
-     if (match != nil)
-      song[match[1]] = match[2]
-     end
-   end 
+     song[match[1]] = match[2] unless match == nil
+   end
    songs << song
   end
 end
 
 
 songs.each do |song|
-  id = song['id']
-  key = song['key']
-  json_url = "http://hypem.com/serve/source/#{id}/#{key}"
-
+  json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
   filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
-  if (File.exists?(filename))
-    next
-  end
-
+  next if (File.exists?(filename))
+    
   begin
     data_string = agent.get_file(json_url)  
   rescue Exception => e
     puts "Exception #{e.message}\nwhile trying to fetch json for file #{song['song']}"
   end
   
-  if (data_string != nil)    
+  if (data_string != nil)  
     data = JSON.parse(data_string)
     song_url = data["url"]
     puts " ************** Downloading song ******************"
@@ -122,5 +98,3 @@ songs.each do |song|
     end
   end
 end
-
-
