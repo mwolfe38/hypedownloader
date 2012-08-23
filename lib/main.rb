@@ -4,7 +4,7 @@ require 'json'
 require 'fileutils'
 
 username = "mwolfe38"
-save_to="/home/mwolfe/Music/downloads"
+save_to= File.expand_path("~/Music/downloads")
 
 def clean_filename(filename)
   if (filename == nil)
@@ -62,19 +62,14 @@ total_pages.times do |page_index|
   current_page = start_page + page_index
   url = "http://hypem.com/#{username}/#{current_page}"
   page = agent.get(url)
-  page.search("#content-left .section-track script").each do |script|
-   song = {}
-   script.to_s.each_line() do |line|
-     match  =  line.match(/\s+(artist|postid|id|key|song):\s*'(.*)'/)
-     song[match[1]] = match[2] unless match == nil
-   end
-   songs << song
-  end
+  song_list_str = page.search("#displayList-data").first.content
+  song_json = JSON.parse(song_list_str)
+  songs = song_json['tracks']
 end
-
 
 songs.each do |song|
   json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
+  puts "Json url: #{json_url}"
   filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
   next if (File.exists?(filename))
     
