@@ -2,6 +2,8 @@ require 'mechanize'
 require 'logger'
 require 'json'
 require 'fileutils'
+require 'taglib'
+require 'pp'
 
 username = "mwolfe38"
 save_to= File.expand_path("~/Music/downloads")
@@ -11,7 +13,7 @@ def clean_filename(filename)
     ""
   else
     filename = filename.gsub(/[^\w \- \(\)\.\']*/, "")
-    filename.gsub(/\.\.\./, "")    
+    filename.gsub(/\.\.\./, "")
   end
 end
 def prompt_int(prompt, default)
@@ -43,6 +45,7 @@ end
 
 start_page = prompt_int("Start with page", 1)
 total_pages = prompt_int("Total pages to download", 1)
+page_limit  = prompt_int("Songs per page", -1)
 username = prompt_string("Username", username)
 puts "We will download from page #{start_page} with total pages #{total_pages} with username #{username}"
 
@@ -67,9 +70,8 @@ total_pages.times do |page_index|
   songs = song_json['tracks']
 end
 
-songs.each do |song|
+songs.each_with_index do |song,index|
   json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
-  puts "Json url: #{json_url}"
   filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
   next if (File.exists?(filename))
     
@@ -87,9 +89,23 @@ songs.each do |song|
     agent.pluggable_parser.default = Mechanize::Download   
     begin  
       agent.get(song_url).save(filename)
-      puts "\tSuccess!"
+      puts "Downloaded song to #{filename}.. now reading id3"
+     
+     TagLib::FileRef.open(filename) do | mp3File |
+         tag = mp3File.tag
+         if tag == nil || tag.title == nil
+             tag.title = song['song']
+             tag.artist = song['artist']
+                                     #tag.album = f_album unless f_album == nil
+             puts "artist #{song['artist']} and title #{song['song']} written for #{filename}"
+             mp3File.save
+         end
+     end
+
     rescue Exception => e
       puts "Exception #{e.message}\nwhile trying to fetch mp3 file for #{song['song']}"
     end
+    break if page_limit > 0 && (index + 1) >= page_limit
   end
 end
+
