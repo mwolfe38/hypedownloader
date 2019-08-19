@@ -1,29 +1,37 @@
+require 'mechanize'
+require 'logger'
+require 'json'
+require 'fileutils'
 require 'taglib'
 require 'pp'
-if (ARGV.length < 1)
-  puts "Path to mp3 files required."
-  exit
-end
-dir = ARGV[0].chomp("/")
-Dir.glob(dir + "/*.mp3") do |file|
-  basename = File.basename(file);
-  file_parts = basename.split(" - ")
-  next if file_parts.length < 2
-  f_artist = file_parts[0]
-  f_album = nil
-  if (file_parts.length == 3)  
-	f_album = file_parts[1]
-  end
-  f_song = file_parts.last.chomp(".mp3")
-  TagLib::FileRef.open(file) do | file1 |
-    tag = file1.tag
-    if tag == nil || tag.title == nil
-      tag.title = f_song
-      tag.artist = f_artist
-      tag.album = f_album unless f_album == nil
-      puts "artist and title written for #{basename}"
-      file1.save
-    end
-  end
+
+save_to= File.expand_path("~/Music/Shared/new")
+
+
+FileUtils.mkdir_p(save_to)
+log_file = "log.txt"
+
+songs = Dir.glob("#{save_to}/*.mp3") do |filename|
+	song = File.basename(filename, '.mp3')
+	artistIndex = song.index("-")
+	if artistIndex < 0
+		continue  
+	end
+	artist = song.slice(0, artistIndex).strip
+	title = song.slice(artistIndex+1, song.length).strip
+	puts("artist: #{artist} title #{title}")
+
+	TagLib::FileRef.open(filename) do | mp3File |
+		tag = mp3File.tag
+		puts "tag is #{tag.title}"
+
+		if tag == nil || tag.title == nil || tag.title.empty?
+			tag.title = title
+			tag.artist = artist
+			#tag.album = f_album unless f_album == nil
+			puts "artist #{artist} and title #{title} written for #{filename}"
+			mp3File.save
+		end
+	end
 end
 

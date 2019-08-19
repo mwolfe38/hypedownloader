@@ -6,7 +6,7 @@ require 'taglib'
 require 'pp'
 
 username = "mwolfe38"
-save_to= File.expand_path("~/Music/downloads")
+save_to= File.expand_path("~/Music/Shared/new")
 
 def clean_filename(filename)
   if (filename == nil)
@@ -56,18 +56,19 @@ agent = Mechanize.new { |a|
      File.delete(log_file)
   end
   a.log = Logger.new(log_file)
-  a.user_agent = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.56 Safari/535.11"
+  a.user_agent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36"
 }
 
 songs = []
 
 total_pages.times do |page_index|
   current_page = start_page + page_index
+  puts "Downloading page #{page_index}"
   url = "http://hypem.com/#{username}/#{current_page}"
   page = agent.get(url)
   song_list_str = page.search("#displayList-data").first.content
   song_json = JSON.parse(song_list_str)
-  songs = song_json['tracks']
+  songs.concat(song_json['tracks'])
 end
 
 songs.each_with_index do |song,index|
@@ -92,11 +93,11 @@ songs.each_with_index do |song,index|
       puts "Downloaded song to #{filename}.. now reading id3"
      
      TagLib::FileRef.open(filename) do | mp3File |
-         tag = mp3File.tag
-         if tag == nil || tag.title == nil
+	    tag = mp3File.tag
+         if tag == nil || tag.title == nil || tag.title.empty?
              tag.title = song['song']
              tag.artist = song['artist']
-                                     #tag.album = f_album unless f_album == nil
+             #tag.album = f_album unless f_album == nil
              puts "artist #{song['artist']} and title #{song['song']} written for #{filename}"
              mp3File.save
          end
