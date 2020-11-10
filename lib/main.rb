@@ -6,7 +6,8 @@ require 'taglib'
 require 'pp'
 
 username = "mwolfe38"
-save_to= File.expand_path("~/Music/Shared/new")
+save_to = File.expand_path("~/Music/Shared/new")
+downloaded = File.realdirpath(File.join(save_to, "..", "uploaded"))
 
 def clean_filename(filename)
   if (filename == nil)
@@ -17,7 +18,7 @@ def clean_filename(filename)
   end
 end
 def prompt_int(prompt, default)
-  prompt = prompt + " [#{default}]" if (default != nil)  
+  prompt = prompt + " [#{default}]" if (default != nil)
   prompt += ": "
   while true
     print prompt
@@ -31,16 +32,16 @@ def prompt_int(prompt, default)
   end
 end
 
-def prompt_string(prompt, default) 
-  prompt = prompt + " [#{default}]" if default != nil  
+def prompt_string(prompt, default)
+  prompt = prompt + " [#{default}]" if default != nil
   prompt = prompt + ": "
   while true
     print prompt
     val = gets.strip
     return default if (val == "" && default != nil)
-    return val if val != ""    
+    return val if val != ""
     puts "Invalid value, try again"
-  end  
+  end
 end
 
 start_page = prompt_int("Start with page", 1)
@@ -73,25 +74,27 @@ end
 
 songs.each_with_index do |song,index|
   json_url = "http://hypem.com/serve/source/#{song['id']}/#{song['key']}"
-  filename = "#{save_to}/#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
-  next if (File.exists?(filename))
-    
+  filename = "#{clean_filename(song['artist'])} - #{clean_filename(song['song'])}.mp3"
+  file_to_save = "#{save_to}/#{filename}"
+  file_uploaded = "#{downloaded}/#{filename}"
+  next if (File.exists?(file_to_save) || File.exists?(file_uploaded))
+
   begin
-    data_string = agent.get_file(json_url)  
+    data_string = agent.get_file(json_url)
   rescue Exception => e
     puts "Exception #{e.message}\nwhile trying to fetch json for file #{song['song']}"
   end
-  
-  if (data_string != nil)  
+
+  if (data_string != nil)
     data = JSON.parse(data_string)
     song_url = data["url"]
     puts " ************** Downloading song ******************"
     puts "\tartist: #{song['artist']}\n\ttitle: #{song['song']}\n\turl: #{song_url}\n\tfile: #{filename}"
-    agent.pluggable_parser.default = Mechanize::Download   
-    begin  
+    agent.pluggable_parser.default = Mechanize::Download
+    begin
       agent.get(song_url).save(filename)
       puts "Downloaded song to #{filename}.. now reading id3"
-     
+
      TagLib::FileRef.open(filename) do | mp3File |
 	    tag = mp3File.tag
          if tag == nil || tag.title == nil || tag.title.empty?
@@ -109,4 +112,3 @@ songs.each_with_index do |song,index|
     break if page_limit > 0 && (index + 1) >= page_limit
   end
 end
-
