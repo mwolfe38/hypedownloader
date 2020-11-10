@@ -92,10 +92,10 @@ songs.each_with_index do |song,index|
     puts "\tartist: #{song['artist']}\n\ttitle: #{song['song']}\n\turl: #{song_url}\n\tfile: #{filename}"
     agent.pluggable_parser.default = Mechanize::Download
     begin
-      agent.get(song_url).save(filename)
-      puts "Downloaded song to #{filename}.. now reading id3"
+      agent.get(song_url).save(file_to_save)
+      puts "Downloaded song to #{file_to_save}.. now reading id3"
 
-     TagLib::FileRef.open(filename) do | mp3File |
+     TagLib::FileRef.open(file_to_save) do | mp3File |
 	    tag = mp3File.tag
          if tag == nil || tag.title == nil || tag.title.empty?
              tag.title = song['song']
